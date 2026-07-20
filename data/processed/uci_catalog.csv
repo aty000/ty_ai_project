@@ -1,0 +1,210 @@
+﻿id,name,url
+1,Abalone,https://archive.ics.uci.edu/static/public/1/data.csv
+2,Adult,https://archive.ics.uci.edu/static/public/2/data.csv
+3,Annealing,https://archive.ics.uci.edu/static/public/3/data.csv
+8,Audiology (Standardized),https://archive.ics.uci.edu/static/public/8/data.csv
+9,Auto MPG,https://archive.ics.uci.edu/static/public/9/data.csv
+10,Automobile,https://archive.ics.uci.edu/static/public/10/data.csv
+12,Balance Scale,https://archive.ics.uci.edu/static/public/12/data.csv
+13,Balloons,https://archive.ics.uci.edu/static/public/13/data.csv
+14,Breast Cancer,https://archive.ics.uci.edu/static/public/14/data.csv
+15,Breast Cancer Wisconsin (Original),https://archive.ics.uci.edu/static/public/15/data.csv
+16,Breast Cancer Wisconsin (Prognostic),https://archive.ics.uci.edu/static/public/16/data.csv
+17,Breast Cancer Wisconsin (Diagnostic),https://archive.ics.uci.edu/static/public/17/data.csv
+18,Pittsburgh Bridges,https://archive.ics.uci.edu/static/public/18/data.csv
+19,Car Evaluation,https://archive.ics.uci.edu/static/public/19/data.csv
+20,Census Income,https://archive.ics.uci.edu/static/public/20/data.csv
+22,Chess (King-Rook vs. King-Pawn),https://archive.ics.uci.edu/static/public/22/data.csv
+23,Chess (King-Rook vs. King),https://archive.ics.uci.edu/static/public/23/data.csv
+26,Connect-4,https://archive.ics.uci.edu/static/public/26/data.csv
+27,Credit Approval,https://archive.ics.uci.edu/static/public/27/data.csv
+28,Japanese Credit Screening,https://archive.ics.uci.edu/static/public/28/data.csv
+29,Computer Hardware,https://archive.ics.uci.edu/static/public/29/data.csv
+30,Contraceptive Method Choice,https://archive.ics.uci.edu/static/public/30/data.csv
+31,Covertype,https://archive.ics.uci.edu/static/public/31/data.csv
+32,Cylinder Bands,https://archive.ics.uci.edu/static/public/32/data.csv
+33,Dermatology,https://archive.ics.uci.edu/static/public/33/data.csv
+38,Echocardiogram,https://archive.ics.uci.edu/static/public/38/data.csv
+39,Ecoli,https://archive.ics.uci.edu/static/public/39/data.csv
+40,Flags,https://archive.ics.uci.edu/static/public/40/data.csv
+42,Glass Identification,https://archive.ics.uci.edu/static/public/42/data.csv
+43,Haberman's Survival,https://archive.ics.uci.edu/static/public/43/data.csv
+44,Hayes-Roth,https://archive.ics.uci.edu/static/public/44/data.csv
+45,Heart Disease,https://archive.ics.uci.edu/static/public/45/data.csv
+46,Hepatitis,https://archive.ics.uci.edu/static/public/46/data.csv
+47,Horse Colic,https://archive.ics.uci.edu/static/public/47/data.csv
+50,Image Segmentation,https://archive.ics.uci.edu/static/public/50/data.csv
+52,Ionosphere,https://archive.ics.uci.edu/static/public/52/data.csv
+53,Iris,https://archive.ics.uci.edu/static/public/53/data.csv
+54,ISOLET,https://archive.ics.uci.edu/static/public/54/data.csv
+58,Lenses,https://archive.ics.uci.edu/static/public/58/data.csv
+59,Letter Recognition,https://archive.ics.uci.edu/static/public/59/data.csv
+60,Liver Disorders,https://archive.ics.uci.edu/static/public/60/data.csv
+62,Lung Cancer,https://archive.ics.uci.edu/static/public/62/data.csv
+63,Lymphography,https://archive.ics.uci.edu/static/public/63/data.csv
+69,Molecular Biology (Splice-junction Gene Sequences),https://archive.ics.uci.edu/static/public/69/data.csv
+70,MONK's Problems,https://archive.ics.uci.edu/static/public/70/data.csv
+73,Mushroom,https://archive.ics.uci.edu/static/public/73/data.csv
+74,Musk (Version 1),https://archive.ics.uci.edu/static/public/74/data.csv
+75,Musk (Version 2),https://archive.ics.uci.edu/static/public/75/data.csv
+76,Nursery,https://archive.ics.uci.edu/static/public/76/data.csv
+78,Page Blocks Classification,https://archive.ics.uci.edu/static/public/78/data.csv
+80,Optical Recognition of Handwritten Digits,https://archive.ics.uci.edu/static/public/80/data.csv
+81,Pen-Based Recognition of Handwritten Digits,https://archive.ics.uci.edu/static/public/81/data.csv
+82,Post-Operative Patient,https://archive.ics.uci.edu/static/public/82/data.csv
+83,Primary Tumor,https://archive.ics.uci.edu/static/public/83/data.csv
+87,Servo,https://archive.ics.uci.edu/static/public/87/data.csv
+88,Shuttle Landing Control,https://archive.ics.uci.edu/static/public/88/data.csv
+89,Solar Flare,https://archive.ics.uci.edu/static/public/89/data.csv
+90,Soybean (Large),https://archive.ics.uci.edu/static/public/90/data.csv
+91,Soybean (Small),https://archive.ics.uci.edu/static/public/91/data.csv
+92,Challenger USA Space Shuttle O-Ring,https://archive.ics.uci.edu/static/public/92/data.csv
+94,Spambase,https://archive.ics.uci.edu/static/public/94/data.csv
+95,SPECT Heart,https://archive.ics.uci.edu/static/public/95/data.csv
+96,SPECTF Heart,https://archive.ics.uci.edu/static/public/96/data.csv
+101,Tic-Tac-Toe Endgame,https://archive.ics.uci.edu/static/public/101/data.csv
+105,Congressional Voting Records,https://archive.ics.uci.edu/static/public/105/data.csv
+107,Waveform Database Generator (Version 1),https://archive.ics.uci.edu/static/public/107/data.csv
+109,Wine,https://archive.ics.uci.edu/static/public/109/data.csv
+110,Yeast,https://archive.ics.uci.edu/static/public/110/data.csv
+111,Zoo,https://archive.ics.uci.edu/static/public/111/data.csv
+116,US Census Data (1990),https://archive.ics.uci.edu/static/public/116/data.csv
+117,Census-Income (KDD),https://archive.ics.uci.edu/static/public/117/data.csv
+122,El Nino,https://archive.ics.uci.edu/static/public/122/data.csv
+143,Statlog (Australian Credit Approval),https://archive.ics.uci.edu/static/public/143/data.csv
+144,Statlog (German Credit Data),https://archive.ics.uci.edu/static/public/144/data.csv
+145,Statlog (Heart),https://archive.ics.uci.edu/static/public/145/data.csv
+146,Statlog (Landsat Satellite),https://archive.ics.uci.edu/static/public/146/data.csv
+147,Statlog (Image Segmentation),https://archive.ics.uci.edu/static/public/147/data.csv
+148,Statlog (Shuttle),https://archive.ics.uci.edu/static/public/148/data.csv
+149,Statlog (Vehicle Silhouettes),https://archive.ics.uci.edu/static/public/149/data.csv
+151,"Connectionist Bench (Sonar, Mines vs. Rocks)",https://archive.ics.uci.edu/static/public/151/data.csv
+155,Cloud,https://archive.ics.uci.edu/static/public/155/data.csv
+158,Poker Hand,https://archive.ics.uci.edu/static/public/158/data.csv
+159,MAGIC Gamma Telescope,https://archive.ics.uci.edu/static/public/159/data.csv
+161,Mammographic Mass,https://archive.ics.uci.edu/static/public/161/data.csv
+162,Forest Fires,https://archive.ics.uci.edu/static/public/162/data.csv
+165,Concrete Compressive Strength,https://archive.ics.uci.edu/static/public/165/data.csv
+172,Ozone Level Detection,https://archive.ics.uci.edu/static/public/172/data.csv
+174,Parkinsons,https://archive.ics.uci.edu/static/public/174/data.csv
+176,Blood Transfusion Service Center,https://archive.ics.uci.edu/static/public/176/data.csv
+183,Communities and Crime,https://archive.ics.uci.edu/static/public/183/data.csv
+184,Acute Inflammations,https://archive.ics.uci.edu/static/public/184/data.csv
+186,Wine Quality,https://archive.ics.uci.edu/static/public/186/data.csv
+189,Parkinsons Telemonitoring,https://archive.ics.uci.edu/static/public/189/data.csv
+193,Cardiotocography,https://archive.ics.uci.edu/static/public/193/data.csv
+198,Steel Plates Faults,https://archive.ics.uci.edu/static/public/198/data.csv
+211,Communities and Crime Unnormalized,https://archive.ics.uci.edu/static/public/211/data.csv
+212,Vertebral Column,https://archive.ics.uci.edu/static/public/212/data.csv
+222,Bank Marketing,https://archive.ics.uci.edu/static/public/222/data.csv
+225,ILPD (Indian Liver Patient Dataset),https://archive.ics.uci.edu/static/public/225/data.csv
+229,Skin Segmentation,https://archive.ics.uci.edu/static/public/229/data.csv
+235,Individual Household Electric Power Consumption,https://archive.ics.uci.edu/static/public/235/data.csv
+242,Energy Efficiency,https://archive.ics.uci.edu/static/public/242/data.csv
+244,Fertility,https://archive.ics.uci.edu/static/public/244/data.csv
+247,ISTANBUL STOCK EXCHANGE,https://archive.ics.uci.edu/static/public/247/data.csv
+257,User Knowledge Modeling,https://archive.ics.uci.edu/static/public/257/data.csv
+264,EEG Eye State,https://archive.ics.uci.edu/static/public/264/data.csv
+267,Banknote Authentication,https://archive.ics.uci.edu/static/public/267/data.csv
+270,Gas Sensor Array Drift at Different Concentrations,https://archive.ics.uci.edu/static/public/270/data.csv
+275,Bike Sharing,https://archive.ics.uci.edu/static/public/275/data.csv
+277,Thoracic Surgery Data,https://archive.ics.uci.edu/static/public/277/data.csv
+291,Airfoil Self-Noise,https://archive.ics.uci.edu/static/public/291/data.csv
+292,Wholesale customers,https://archive.ics.uci.edu/static/public/292/data.csv
+294,Combined Cycle Power Plant,https://archive.ics.uci.edu/static/public/294/data.csv
+296,Diabetes 130-US Hospitals for Years 1999-2008,https://archive.ics.uci.edu/static/public/296/data.csv
+300,Tennis Major Tournament Match Statistics,https://archive.ics.uci.edu/static/public/300/data.csv
+312,Dow Jones Index,https://archive.ics.uci.edu/static/public/312/data.csv
+320,Student Performance,https://archive.ics.uci.edu/static/public/320/data.csv
+327,Phishing Websites,https://archive.ics.uci.edu/static/public/327/data.csv
+329,Diabetic Retinopathy Debrecen,https://archive.ics.uci.edu/static/public/329/data.csv
+332,Online News Popularity,https://archive.ics.uci.edu/static/public/332/data.csv
+336,Chronic Kidney Disease,https://archive.ics.uci.edu/static/public/336/data.csv
+342,Mice Protein Expression,https://archive.ics.uci.edu/static/public/342/data.csv
+350,Default of Credit Card Clients,https://archive.ics.uci.edu/static/public/350/data.csv
+352,Online Retail,https://archive.ics.uci.edu/static/public/352/data.csv
+357,Occupancy Detection ,https://archive.ics.uci.edu/static/public/357/data.csv
+360,Air Quality,https://archive.ics.uci.edu/static/public/360/data.csv
+365,Polish Companies Bankruptcy,https://archive.ics.uci.edu/static/public/365/data.csv
+367,Dota2 Games Results,https://archive.ics.uci.edu/static/public/367/data.csv
+368,Facebook Metrics,https://archive.ics.uci.edu/static/public/368/data.csv
+372,HTRU2,https://archive.ics.uci.edu/static/public/372/data.csv
+373,Drug Consumption (Quantified),https://archive.ics.uci.edu/static/public/373/data.csv
+374,Appliances Energy Prediction,https://archive.ics.uci.edu/static/public/374/data.csv
+379,Website Phishing,https://archive.ics.uci.edu/static/public/379/data.csv
+380,YouTube Spam Collection,https://archive.ics.uci.edu/static/public/380/data.csv
+381,Beijing PM2.5,https://archive.ics.uci.edu/static/public/381/data.csv
+383,Cervical Cancer (Risk Factors),https://archive.ics.uci.edu/static/public/383/data.csv
+390,Stock Portfolio Performance,https://archive.ics.uci.edu/static/public/390/data.csv
+396,Sales Transactions Weekly,https://archive.ics.uci.edu/static/public/396/data.csv
+409,Daily Demand Forecasting Orders,https://archive.ics.uci.edu/static/public/409/data.csv
+419,Autistic Spectrum Disorder Screening Data for Children  ,https://archive.ics.uci.edu/static/public/419/data.csv
+426,Autism Screening Adult,https://archive.ics.uci.edu/static/public/426/data.csv
+445,Absenteeism at work,https://archive.ics.uci.edu/static/public/445/data.csv
+451,Breast Cancer Coimbra,https://archive.ics.uci.edu/static/public/451/data.csv
+461,Drug Reviews (Druglib.com),https://archive.ics.uci.edu/static/public/461/data.csv
+462,Drug Reviews (Drugs.com),https://archive.ics.uci.edu/static/public/462/data.csv
+464,Superconductivty Data,https://archive.ics.uci.edu/static/public/464/data.csv
+467,Student Academics Performance,https://archive.ics.uci.edu/static/public/467/data.csv
+468,Online Shoppers Purchasing Intention Dataset,https://archive.ics.uci.edu/static/public/468/data.csv
+471,Electrical Grid Stability Simulated Data ,https://archive.ics.uci.edu/static/public/471/data.csv
+477,Real Estate Valuation,https://archive.ics.uci.edu/static/public/477/data.csv
+484,Travel Reviews,https://archive.ics.uci.edu/static/public/484/data.csv
+485,Travel Review Ratings,https://archive.ics.uci.edu/static/public/485/data.csv
+488,Facebook Live Sellers in Thailand,https://archive.ics.uci.edu/static/public/488/data.csv
+492,Metro Interstate Traffic Volume,https://archive.ics.uci.edu/static/public/492/data.csv
+503,Hepatitis C Virus (HCV) for Egyptian patients,https://archive.ics.uci.edu/static/public/503/data.csv
+519,Heart Failure Clinical Records,https://archive.ics.uci.edu/static/public/519/data.csv
+529,Early Stage Diabetes Risk Prediction,https://archive.ics.uci.edu/static/public/529/data.csv
+536,Pedestrians in Traffic,https://archive.ics.uci.edu/static/public/536/data.csv
+537,Cervical Cancer Behavior Risk,https://archive.ics.uci.edu/static/public/537/data.csv
+544,Estimation of Obesity Levels Based On Eating Habits and Physical Condition ,https://archive.ics.uci.edu/static/public/544/data.csv
+545,Rice (Cammeo and Osmancik),https://archive.ics.uci.edu/static/public/545/data.csv
+547,Algerian Forest Fires,https://archive.ics.uci.edu/static/public/547/data.csv
+551,Gas Turbine CO and NOx Emission Data Set,https://archive.ics.uci.edu/static/public/551/data.csv
+555,Apartment for Rent Classified,https://archive.ics.uci.edu/static/public/555/data.csv
+560,Seoul Bike Sharing Demand,https://archive.ics.uci.edu/static/public/560/data.csv
+563,Iranian Churn,https://archive.ics.uci.edu/static/public/563/data.csv
+565,Bone marrow transplant: children,https://archive.ics.uci.edu/static/public/565/data.csv
+567,COVID-19 Surveillance,https://archive.ics.uci.edu/static/public/567/data.csv
+571,HCV data,https://archive.ics.uci.edu/static/public/571/data.csv
+572,Taiwanese Bankruptcy Prediction,https://archive.ics.uci.edu/static/public/572/data.csv
+579,Myocardial infarction complications,https://archive.ics.uci.edu/static/public/579/data.csv
+582,Student Performance on an Entrance Examination,https://archive.ics.uci.edu/static/public/582/data.csv
+591,Gender by Name,https://archive.ics.uci.edu/static/public/591/data.csv
+597,Productivity Prediction of Garment Employees,https://archive.ics.uci.edu/static/public/597/data.csv
+601,AI4I 2020 Predictive Maintenance Dataset,https://archive.ics.uci.edu/static/public/601/data.csv
+602,Dry Bean,https://archive.ics.uci.edu/static/public/602/data.csv
+603,In-Vehicle Coupon Recommendation,https://archive.ics.uci.edu/static/public/603/data.csv
+697,Predict Students' Dropout and Academic Success,https://archive.ics.uci.edu/static/public/697/data.csv
+713,Auction Verification,https://archive.ics.uci.edu/static/public/713/data.csv
+722,NATICUSdroid (Android Permissions),https://archive.ics.uci.edu/static/public/722/data.csv
+728,Toxicity,https://archive.ics.uci.edu/static/public/728/data.csv
+732,DARWIN,https://archive.ics.uci.edu/static/public/732/data.csv
+755,Accelerometer Gyro Mobile Phone,https://archive.ics.uci.edu/static/public/755/data.csv
+759,Glioma Grading Clinical and Mutation Features,https://archive.ics.uci.edu/static/public/759/data.csv
+760,Multivariate Gait Data,https://archive.ics.uci.edu/static/public/760/data.csv
+763,Land Mines,https://archive.ics.uci.edu/static/public/763/data.csv
+799,Single Elder Home Monitoring: Gas and Position,https://archive.ics.uci.edu/static/public/799/data.csv
+827,Sepsis Survival Minimal Clinical Records,https://archive.ics.uci.edu/static/public/827/data.csv
+848,Secondary Mushroom,https://archive.ics.uci.edu/static/public/848/data.csv
+849,Power Consumption of Tetouan City,https://archive.ics.uci.edu/static/public/849/data.csv
+850,Raisin,https://archive.ics.uci.edu/static/public/850/data.csv
+851,Steel Industry Energy Consumption,https://archive.ics.uci.edu/static/public/851/data.csv
+856,Higher Education Students Performance Evaluation,https://archive.ics.uci.edu/static/public/856/data.csv
+857,Risk Factor Prediction of Chronic Kidney Disease,https://archive.ics.uci.edu/static/public/857/data.csv
+863,Maternal Health Risk,https://archive.ics.uci.edu/static/public/863/data.csv
+864,Room Occupancy Estimation,https://archive.ics.uci.edu/static/public/864/data.csv
+878,Cirrhosis Patient Survival Prediction,https://archive.ics.uci.edu/static/public/878/data.csv
+880,SUPPORT2,https://archive.ics.uci.edu/static/public/880/data.csv
+887,National Health and Nutrition Health Survey 2013-2014 (NHANES) Age Prediction Subset,https://archive.ics.uci.edu/static/public/887/data.csv
+890,AIDS Clinical Trials Group Study 175,https://archive.ics.uci.edu/static/public/890/data.csv
+891,CDC Diabetes Health Indicators,https://archive.ics.uci.edu/static/public/891/data.csv
+911,Recipe Reviews and User Feedback,https://archive.ics.uci.edu/static/public/911/data.csv
+913,Forty Soybean Cultivars from Subsequent Harvests,https://archive.ics.uci.edu/static/public/913/data.csv
+915,Differentiated Thyroid Cancer Recurrence,https://archive.ics.uci.edu/static/public/915/data.csv
+925,Infrared Thermography Temperature,https://archive.ics.uci.edu/static/public/925/data.csv
+936,National Poll on Healthy Aging (NPHA),https://archive.ics.uci.edu/static/public/936/data.csv
+938,Regensburg Pediatric Appendicitis,https://archive.ics.uci.edu/static/public/938/data.csv
+942,RT-IoT2022 ,https://archive.ics.uci.edu/static/public/942/data.csv
+967,PhiUSIIL Phishing URL (Website),https://archive.ics.uci.edu/static/public/967/data.csv
