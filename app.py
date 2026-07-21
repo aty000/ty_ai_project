@@ -1,35 +1,21 @@
-from pathlib import Path
-
 import streamlit as st
 
-from src.recommender import (
-    load_dataset_metadata,
-    recommend_datasets,
-)
-
-
-BASE_DIR = Path(__file__).resolve().parent
-METADATA_PATH = (
-    BASE_DIR
-    / "data"
-    / "processed"
-    / "dataset_metadata.csv"
-)
+from src.live_recommender import LiveRecommender
 
 
 st.set_page_config(
-    page_title="AI Resource Recommendation System",
+    page_title="AI Dataset Recommendation System",
     page_icon="📊",
     layout="wide",
 )
 
 
-@st.cache_data(show_spinner=False)
-def load_data():
+@st.cache_resource
+def create_recommender() -> LiveRecommender:
     """
-    로컬 데이터셋 메타데이터를 캐시에 저장한다.
+    LiveRecommender 객체를 한 번만 생성하여 재사용한다.
     """
-    return load_dataset_metadata(METADATA_PATH)
+    return LiveRecommender()
 
 
 def display_recommendation(
@@ -37,116 +23,115 @@ def display_recommendation(
     dataset,
 ) -> None:
     """
-    추천 데이터셋 한 개를 Streamlit 카드 형태로 출력한다.
+    추천 데이터셋 한 개를 카드 형태로 출력한다.
     """
-
-    st.subheader(
-        f"{rank}. {dataset['dataset_name']}"
-    )
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            "Similarity",
-            f"{dataset['similarity_percent']}%",
+    with st.container(border=True):
+        st.subheader(
+            f"{rank}. {dataset.dataset_name}"
         )
 
-    with col2:
-        st.write("**Task Type**")
-        st.write(dataset["task_type"])
+        col1, col2, col3, col4 = st.columns(4)
 
-    with col3:
-        st.write("**Domain**")
-        st.write(dataset["domain"])
+        col1.metric(
+            "Source",
+            dataset.source,
+        )
 
-    with col4:
-        st.write("**Difficulty**")
-        st.write(dataset["difficulty"])
+        col2.metric(
+            "Relevance",
+            f"{dataset.relevance_score:.3f}",
+        )
 
-    st.write(dataset["description"])
+        col3.metric(
+            "Popularity",
+            f"{dataset.popularity:.3f}",
+        )
 
-    st.caption(
-        f"Source: {dataset['source']} | "
-        f"Tags: {dataset['tags']}"
-    )
+        col4.metric(
+            "Final Score",
+            f"{dataset.final_score:.3f}",
+        )
 
-    st.link_button(
-        "Open original dataset",
-        dataset["url"],
-    )
+        if dataset.description:
+            st.write(dataset.description)
 
-    st.divider()
+        detail_col1, detail_col2 = st.columns(2)
+
+        detail_col1.write(
+            f"**Task Type:** "
+            f"{dataset.task_type or 'Unknown'}"
+        )
+
+        detail_col2.write(
+            f"**Domain:** "
+            f"{dataset.domain or 'Unknown'}"
+        )
+
+        st.write(
+            f"**Task Confidence:** "
+            f"{dataset.task_confidence:.0%}"
+        )
+
+        st.write(
+            "**Recommended Metrics:** "
+            + ", ".join(dataset.recommended_metrics)
+        )
+
+        st.write("**Analysis Signals:**")
+
+        for signal in dataset.analysis_signals:
+            st.write(f"- {signal}")
+
+        if dataset.num_instances is not None:
+            st.write(
+                f"**Number of instances:** "
+                f"{dataset.num_instances:,}"
+            )
+
+        if dataset.num_features is not None:
+            st.write(
+                f"**Number of features:** "
+                f"{dataset.num_features:,}"
+            )
+
+        if dataset.url:
+            st.link_button(
+                "Open original dataset",
+                dataset.url,
+            )
 
 
-st.title("📊 AI Resource Recommendation System")
+st.title("📊 AI Dataset Recommendation System")
 
 st.write(
-    "Describe the goal of your AI project and receive dataset "
-    "recommendations based on content similarity."
+    "Describe your AI project. The system searches UCI and Kaggle "
+    "and ranks datasets using relevance and popularity."
 )
 
 
-try:
-    dataset_metadata = load_data()
-
-except (FileNotFoundError, ValueError) as error:
-    st.error(str(error))
-    st.stop()
-
-
 with st.sidebar:
-    st.header("Project Conditions")
-
-    task_types = ["All"] + sorted(
-        dataset_metadata["task_type"]
-        .dropna()
-        .unique()
-        .tolist()
-    )
-
-    domains = ["All"] + sorted(
-        dataset_metadata["domain"]
-        .dropna()
-        .unique()
-        .tolist()
-    )
-
-    difficulties = ["All"] + sorted(
-        dataset_metadata["difficulty"]
-        .dropna()
-        .unique()
-        .tolist()
-    )
-
-    selected_task_type = st.selectbox(
-        "Task Type",
-        task_types,
-    )
-
-    selected_domain = st.selectbox(
-        "Domain",
-        domains,
-    )
-
-    selected_difficulty = st.selectbox(
-        "Difficulty",
-        difficulties,
-    )
+    st.header("Recommendation Settings")
 
     top_n = st.slider(
         "Number of recommendations",
         min_value=1,
-        max_value=5,
-        value=3,
+        max_value=10,
+        value=5,
+    )
+
+    limit_per_source = st.slider(
+        "Search results per source",
+        min_value=5,
+        max_value=30,
+        value=10,
+        step=5,
     )
 
 
 project_description = st.text_area(
     "Describe your AI project",
     placeholder=(
-        "Example: I want to predict household electricity consumption "
-        "using historical hourly measurements."
+        "Example: house prices using income and location data"
     ),
     height=180,
 )
@@ -160,49 +145,46 @@ recommend_button = st.button(
 
 
 if recommend_button:
-    if not project_description.strip():
+    query = project_description.strip()
+
+    if not query:
         st.warning(
             "Please enter a project description."
         )
 
     else:
         with st.spinner(
-            "Searching for relevant datasets..."
+            "Searching UCI and Kaggle datasets..."
         ):
-            recommendations = recommend_datasets(
-                project_description=project_description,
-                dataframe=dataset_metadata,
-                task_type=selected_task_type,
-                domain=selected_domain,
-                difficulty=selected_difficulty,
-                top_n=top_n,
-            )
+            try:
+                recommender = create_recommender()
 
-        if recommendations.empty:
+                recommendations = recommender.recommend(
+                    project_description=query,
+                    limit=top_n,
+                    limit_per_source=limit_per_source,
+                )
+
+            except Exception as error:
+                st.error(
+                    f"Recommendation failed: {error}"
+                )
+                recommendations = []
+
+        if not recommendations:
             st.warning(
-                "No datasets matched the selected conditions. "
-                "Try changing one or more filters to All."
+                "No sufficiently relevant datasets were found."
             )
 
         else:
-            st.header(
-                "Recommended Datasets"
+            st.header("Recommended Datasets")
+
+            st.caption(
+                f"Showing {len(recommendations)} dataset(s)."
             )
 
-            result_count = len(recommendations)
-
-            if result_count < top_n:
-                st.info(
-                    f"Only {result_count} dataset(s) with sufficient "
-                    "relevance were found. Irrelevant results were excluded."
-                )
-            else:
-                st.caption(
-                    f"Showing {result_count} recommended dataset(s)."
-                )
-
-            for rank, (_, dataset) in enumerate(
-                recommendations.iterrows(),
+            for rank, dataset in enumerate(
+                recommendations,
                 start=1,
             ):
                 display_recommendation(

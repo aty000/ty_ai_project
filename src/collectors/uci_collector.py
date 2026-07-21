@@ -63,12 +63,28 @@ def _normalize_text(
     return text if text else default
 
 
+def _safe_int(
+    value: Any,
+) -> int | None:
+    """
+    UCI 메타데이터의 행 수와 특성 수를 안전하게 정수로 변환한다.
+    """
+
+    if value is None:
+        return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class UCICollector(DatasetCollector):
     """
     UCI 데이터셋 카탈로그를 검색하는 수집기.
 
     카탈로그는 로컬 CSV 캐시를 사용하고,
-    한 프로세스 안에서는 TF-IDF 인덱스를 한 번만 생성한다.
+    한 Collector 인스턴스에서는 TF-IDF 인덱스를 한 번만 생성한다.
     """
 
     source_name = "UCI"
@@ -125,6 +141,7 @@ class UCICollector(DatasetCollector):
                 "models",
                 "machine",
                 "learning",
+                "project",
             }
         )
 
@@ -132,6 +149,7 @@ class UCICollector(DatasetCollector):
             lowercase=True,
             stop_words=list(custom_stop_words),
             ngram_range=(1, 2),
+            sublinear_tf=True,
         )
 
         catalog_matrix = vectorizer.fit_transform(
@@ -204,9 +222,12 @@ class UCICollector(DatasetCollector):
             f"{UCI_DATASET_URL}/{numeric_id}"
         )
 
-        catalog_score = float(
-            item.get("catalog_score", 0.0)
-        )
+        try:
+            catalog_score = float(
+                item.get("catalog_score", 0.0)
+            )
+        except (TypeError, ValueError):
+            catalog_score = 0.0
 
         try:
             dataset = fetch_ucirepo(
@@ -256,17 +277,24 @@ class UCICollector(DatasetCollector):
                     default=fallback_url,
                 ),
                 source_id=str(numeric_id),
-                num_instances=_metadata_value(
-                    metadata,
-                    "num_instances",
-                    None,
+                num_instances=_safe_int(
+                    _metadata_value(
+                        metadata,
+                        "num_instances",
+                        None,
+                    )
                 ),
-                num_features=_metadata_value(
-                    metadata,
-                    "num_features",
-                    None,
+                num_features=_safe_int(
+                    _metadata_value(
+                        metadata,
+                        "num_features",
+                        None,
+                    )
                 ),
-                popularity=catalog_score,
+
+                # catalog_score는 인기도가 아니라
+                # UCI 내부 검색 관련도이므로 retrieval_score에 저장한다.
+                retrieval_score=catalog_score,
             )
 
         except Exception:
@@ -281,7 +309,7 @@ class UCICollector(DatasetCollector):
                 source=self.source_name,
                 url=fallback_url,
                 source_id=str(numeric_id),
-                popularity=catalog_score,
+                retrieval_score=catalog_score,
             )
 
     def search(
@@ -314,7 +342,7 @@ class UCICollector(DatasetCollector):
         return results
 
 
-# UCICollector 객체를 한 프로세스에서 한 번만 생성한다.
+# 외부 함수 진입점에서 같은 인덱스를 재사용하기 위한 전역 인스턴스
 _UCI_COLLECTOR = UCICollector()
 
 

@@ -8,4 +8,8 @@ results = search_uci_datasets(
 print(f"{len(results)} results")
 
 for dataset in results:
-    print(dataset.title, dataset.popularity)
+    print(
+        dataset.dataset_name,
+        round(dataset.popularity, 3),
+        dataset.url,
+    )

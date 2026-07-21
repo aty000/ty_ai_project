@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-
-import pandas as pd
+from dataclasses import dataclass, field
 
 
 @dataclass
 class DatasetCandidate:
-    """
-    서로 다른 데이터 저장소의 결과를 통합하는 공통 형식.
-    """
-
     dataset_name: str
     description: str
     task_type: str
@@ -19,31 +13,42 @@ class DatasetCandidate:
     url: str
 
     source_id: str = ""
+
     num_instances: int | None = None
     num_features: int | None = None
+
+    # 실제 인기도나 다운로드 수 등을 0~1로 변환한 값
     popularity: float = 0.0
 
+    # 각 저장소 내부에서 후보를 검색할 때 계산된 점수
+    retrieval_score: float = 0.0
 
-def candidates_to_dataframe(
-    candidates: list[DatasetCandidate],
-) -> pd.DataFrame:
-    columns = [
-        "dataset_name",
-        "description",
-        "task_type",
-        "domain",
-        "source",
-        "url",
-        "source_id",
-        "num_instances",
-        "num_features",
-        "popularity",
-    ]
+    # 모든 저장소 후보를 합친 뒤 사용자 질문과 다시 계산한 관련도
+    relevance_score: float = 0.0
 
-    if not candidates:
-        return pd.DataFrame(columns=columns)
+    # retrieval_score와 relevance_score 등을 결합한 최종 추천 점수
+    final_score: float = 0.0
 
-    return pd.DataFrame(
-        [asdict(candidate) for candidate in candidates],
-        columns=columns,
+    task_confidence: float = 0.0
+
+    recommended_metrics: list[str] = field(
+        default_factory=list
+    )
+
+    analysis_signals: list[str] = field(
+        default_factory=list
+    )
+
+    target_variable: str = "Unknown"
+
+    recommended_algorithms: list[str] = field(
+        default_factory=list
+    )
+
+    difficulty: str = "Unknown"
+
+    data_format: str = "Unknown"
+
+    warnings: list[str] = field(
+        default_factory=list
     )

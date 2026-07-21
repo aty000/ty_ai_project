@@ -1,18 +1,20 @@
-from src.collectors.kaggle_collector import search_kaggle_datasets
+from src.live_recommender import SourceManager
 
 
-results = search_kaggle_datasets(
+manager = SourceManager()
+
+results = manager.search_all(
     project_description=(
         "house prices using income and location data"
     ),
-    limit=5,
+    limit_per_source=3,
 )
 
-print(f"{len(results)} results")
+print(f"{len(results)} total results")
 
 for dataset in results:
     print(
+        dataset.source,
         dataset.dataset_name,
         dataset.popularity,
-        dataset.url,
     )
