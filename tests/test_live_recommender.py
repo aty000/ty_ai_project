@@ -17,6 +17,7 @@ for rank, dataset in enumerate(
     results,
     start=1,
 ):
+
     print(
         rank,
         dataset.source,
@@ -33,3 +34,10 @@ for rank, dataset in enumerate(
         f"popularity={dataset.popularity:.3f}",
         f"final={dataset.final_score:.3f}",
     )
+
+    print("recommendation reasons:")
+
+    for reason in dataset.recommendation_reasons:
+        print(f"  - {reason}")
+
+    print("-" * 80)

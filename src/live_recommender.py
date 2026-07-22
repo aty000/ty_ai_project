@@ -3,61 +3,151 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from difflib import SequenceMatcher
+from typing import Iterable
 
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import (
+    ENGLISH_STOP_WORDS,
+    TfidfVectorizer,
+)
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.collectors.base import DatasetCollector
 from src.collectors.common import DatasetCandidate
 from src.collectors.kaggle_collector import KaggleCollector
 from src.collectors.uci_collector import UCICollector
-from src.dataset_analyzer import analyze_dataset
+from src.dataset_analyzer import (
+    analyze_dataset,
+    infer_query_intent,
+    suggest_algorithms,
+    suggest_metrics,
+)
 
 
-class SourceManager:
+class LiveRecommender:
     """
-    여러 데이터셋 저장소를 관리하고,
-    각 저장소의 검색 결과를 하나의 후보 리스트로 통합한다.
+    UCI와 Kaggle에서 데이터셋 후보를 수집하고,
+    사용자 프로젝트 설명과의 적합도를 계산해 추천한다.
+
+    처리 순서:
+    1. 저장소별 후보 수집
+    2. 정확한 중복 제거
+    3. 후보 메타데이터 분석
+    4. 텍스트 관련도 계산
+    5. 저장소별 검색 점수 정규화
+    6. Task 및 Domain 일치도 계산
+    7. 최종 점수 계산
+    8. 유사한 이름의 중복 제거
     """
 
-    def __init__(
-        self,
-        collectors: list[DatasetCollector] | None = None,
-    ) -> None:
-        if collectors is None:
-            collectors = [
-                UCICollector(),
-                KaggleCollector(),
-            ]
+    def __init__(self) -> None:
+        self.collectors = [
+            UCICollector(),
+            KaggleCollector(),
+        ]
 
-        self.collectors = collectors
-
-    def search_all(
+    def recommend(
         self,
         project_description: str,
-        limit_per_source: int = 5,
+        limit: int = 5,
+        limit_per_source: int = 10,
     ) -> list[DatasetCandidate]:
         """
-        등록된 모든 Collector에서 데이터셋 후보를 검색한다.
-
-        한 저장소가 실패해도 다른 저장소 검색은 계속한다.
+        프로젝트 설명에 적합한 데이터셋을 추천한다.
         """
 
         query = project_description.strip()
 
-        if not query or limit_per_source <= 0:
+        if not query:
             return []
 
-        all_candidates: list[DatasetCandidate] = []
+        if limit < 1 or limit_per_source < 1:
+            return []
+
+        candidates = self._collect_candidates(
+            project_description=query,
+            limit_per_source=limit_per_source,
+        )
+
+        if not candidates:
+            return []
+
+        candidates = self._remove_exact_duplicates(
+            candidates
+        )
+
+        self._apply_analysis(
+            candidates
+        )
+
+        self._calculate_relevance_scores(
+            project_description=query,
+            candidates=candidates,
+        )
+
+        self._normalize_retrieval_scores(
+            candidates
+        )
+
+        query_intent = infer_query_intent(
+            query
+        )
+
+        self._calculate_match_scores(
+            candidates=candidates,
+            query_task=query_intent.task_type,
+            query_domain=query_intent.domain,
+        )
+
+        self._calculate_final_scores(
+            candidates
+        )
+
+        self._build_recommendation_reasons(
+            candidates=candidates,
+            query_task=query_intent.task_type,
+            query_domain=query_intent.domain,
+        )
+
+        candidates.sort(
+            key=lambda candidate: (
+                candidate.final_score,
+                candidate.relevance_score,
+                candidate.task_match_score,
+                candidate.domain_match_score,
+                candidate.retrieval_score,
+                candidate.popularity,
+            ),
+            reverse=True,
+        )
+
+        candidates = self._remove_similar_names(
+            candidates
+        )
+
+        return candidates[:limit]
+
+    def _collect_candidates(
+        self,
+        project_description: str,
+        limit_per_source: int,
+    ) -> list[DatasetCandidate]:
+        """
+        모든 Collector에서 데이터셋 후보를 수집한다.
+
+        한 저장소에서 오류가 발생해도 다른 저장소 검색은 계속한다.
+        """
+
+        candidates: list[DatasetCandidate] = []
 
         for collector in self.collectors:
             try:
-                results = collector.search(
-                    project_description=query,
+                source_candidates = collector.search(
+                    project_description=project_description,
                     limit=limit_per_source,
                 )
 
-                all_candidates.extend(results)
+                candidates.extend(
+                    source_candidates
+                )
 
             except Exception as error:
                 source_name = getattr(
@@ -67,619 +157,662 @@ class SourceManager:
                 )
 
                 print(
-                    f"{source_name} collector failed: {error}"
+                    f"{source_name} collector failed: "
+                    f"{error}"
                 )
 
-        return all_candidates
+        return candidates
 
-
-class LiveRecommender:
-    """
-    UCI와 Kaggle에서 후보를 수집하고,
-    검색 점수와 통합 관련도를 분리하여 최종 순위를 계산한다.
-
-    처리 단계:
-
-    1. 후보 수집
-    2. 동일 ID 중복 제거
-    3. 전체 후보 관련도 계산
-    4. 저장소별 retrieval 점수 정규화
-    5. 최종 점수 계산
-    6. 이름이 매우 유사한 후보 제거
-    7. 상위 후보 분석
-    """
-
-    def __init__(
-        self,
-        source_manager: SourceManager | None = None,
-        relevance_weight: float = 0.85,
-        retrieval_weight: float = 0.15,
-        minimum_relevance: float = 0.03,
-        duplicate_name_threshold: float = 0.92,
-    ) -> None:
-        if relevance_weight < 0:
-            raise ValueError(
-                "relevance_weight는 0 이상이어야 합니다."
-            )
-
-        if retrieval_weight < 0:
-            raise ValueError(
-                "retrieval_weight는 0 이상이어야 합니다."
-            )
-
-        weight_sum = (
-            relevance_weight
-            + retrieval_weight
-        )
-
-        if weight_sum <= 0:
-            raise ValueError(
-                "점수 가중치의 합은 0보다 커야 합니다."
-            )
-
-        self.source_manager = (
-            source_manager
-            or SourceManager()
-        )
-
-        # 사용자가 다른 가중치를 넣더라도 합계가 1이 되도록 정규화
-        self.relevance_weight = (
-            relevance_weight / weight_sum
-        )
-
-        self.retrieval_weight = (
-            retrieval_weight / weight_sum
-        )
-
-        self.minimum_relevance = self._clamp_score(
-            minimum_relevance
-        )
-
-        self.duplicate_name_threshold = (
-            self._clamp_score(
-                duplicate_name_threshold
-            )
-        )
-
-    def recommend(
-        self,
-        project_description: str,
-        limit: int = 5,
-        limit_per_source: int = 10,
+    @staticmethod
+    def _remove_exact_duplicates(
+        candidates: Iterable[DatasetCandidate],
     ) -> list[DatasetCandidate]:
         """
-        데이터셋 후보를 수집하고 최종 추천 순위로 정렬한다.
+        이름이 완전히 동일한 후보를 하나로 합친다.
+
+        동일한 이름이 여러 저장소에서 발견되면
+        retrieval_score와 popularity가 높은 후보를 유지한다.
         """
 
-        query = project_description.strip()
+        unique_candidates: dict[
+            str,
+            DatasetCandidate,
+        ] = {}
 
-        if (
-            not query
-            or limit <= 0
-            or limit_per_source <= 0
-        ):
-            return []
-
-        # 1. UCI와 Kaggle에서 후보 수집
-        candidates = self.source_manager.search_all(
-            project_description=query,
-            limit_per_source=limit_per_source,
-        )
-
-        if not candidates:
-            return []
-
-        # 2. 동일 저장소의 동일 ID 후보 제거
-        candidates = self._remove_exact_duplicates(
-            candidates
-        )
-
-        if not candidates:
-            return []
-
-        # 3. 모든 후보를 같은 공간에서 비교하는 통합 관련도
-        relevance_scores = self._calculate_relevance(
-            query=query,
-            candidates=candidates,
-        )
-
-        # 4. UCI와 Kaggle 내부 검색 점수 범위를 각각 0~1로 정규화
-        retrieval_scores = (
-            self._normalize_retrieval_scores_by_source(
-                candidates
-            )
-        )
-
-        ranked_candidates: list[
-            tuple[
-                float,
-                float,
-                float,
-                DatasetCandidate,
-            ]
-        ] = []
-
-        for (
-            candidate,
-            relevance,
-            retrieval,
-        ) in zip(
-            candidates,
-            relevance_scores,
-            retrieval_scores,
-            strict=True,
-        ):
-            relevance = self._clamp_score(
-                relevance
+        for candidate in candidates:
+            normalized_name = (
+                LiveRecommender._normalize_dataset_name(
+                    candidate.dataset_name
+                )
             )
 
-            retrieval = self._clamp_score(
-                retrieval
+            if not normalized_name:
+                normalized_name = (
+                    f"{candidate.source}:"
+                    f"{candidate.source_id}:"
+                    f"{candidate.url}"
+                ).lower()
+
+            existing = unique_candidates.get(
+                normalized_name
             )
 
-            if relevance < self.minimum_relevance:
+            if existing is None:
+                unique_candidates[
+                    normalized_name
+                ] = candidate
                 continue
 
-            final_score = (
-                relevance
-                * self.relevance_weight
-                + retrieval
-                * self.retrieval_weight
+            existing_strength = (
+                existing.retrieval_score
+                + existing.popularity
             )
 
+            candidate_strength = (
+                candidate.retrieval_score
+                + candidate.popularity
+            )
+
+            if candidate_strength > existing_strength:
+                unique_candidates[
+                    normalized_name
+                ] = candidate
+
+        return list(
+            unique_candidates.values()
+        )
+
+    @staticmethod
+    def _apply_analysis(
+        candidates: Iterable[DatasetCandidate],
+    ) -> None:
+        """
+        모든 후보의 제목과 설명을 분석한다.
+
+        Collector가 이미 제공한 Task와 Domain이 명확하면
+        이를 유지하고, Unknown일 때만 분석 결과로 보완한다.
+        """
+
+        for candidate in candidates:
+            analysis = analyze_dataset(
+                dataset_name=candidate.dataset_name,
+                description=candidate.description,
+            )
+
+            existing_task = (
+                candidate.task_type.strip()
+                if candidate.task_type
+                else "Unknown"
+            )
+
+            existing_domain = (
+                candidate.domain.strip()
+                if candidate.domain
+                else "Unknown"
+            )
+
+            if existing_task.lower() in {
+                "",
+                "unknown",
+                "none",
+                "not specified",
+            }:
+                candidate.task_type = (
+                    analysis.task_type
+                )
+
+                candidate.task_confidence = (
+                    analysis.confidence
+                )
+            else:
+                candidate.task_type = (
+                    existing_task
+                )
+
+                # 저장소가 제공한 Task는 분석 추론보다
+                # 비교적 신뢰할 수 있다고 간주한다.
+                candidate.task_confidence = max(
+                    candidate.task_confidence,
+                    0.80,
+                )
+
+            if existing_domain.lower() in {
+                "",
+                "unknown",
+                "none",
+                "not specified",
+                "general",
+            }:
+                candidate.domain = (
+                    analysis.domain
+                )
+            else:
+                candidate.domain = (
+                    existing_domain
+                )
+
+            candidate.recommended_metrics = (
+                suggest_metrics(
+                    candidate.task_type
+                )
+            )
+
+            candidate.recommended_algorithms = (
+                suggest_algorithms(
+                    candidate.task_type
+                )
+            )
+
+            candidate.analysis_signals = (
+                analysis.signals
+            )
+
+            candidate.target_variable = (
+                analysis.target_variable
+            )
+
+            candidate.difficulty = (
+                analysis.difficulty
+            )
+
+            candidate.data_format = (
+                analysis.data_format
+            )
+
+            candidate.warnings = (
+                analysis.warnings
+            )
+
+    @staticmethod
+    def _calculate_relevance_scores(
+        project_description: str,
+        candidates: list[DatasetCandidate],
+    ) -> None:
+        """
+        사용자 프로젝트 설명과 각 데이터셋 메타데이터의
+        TF-IDF 코사인 유사도를 계산한다.
+        """
+
+        if not candidates:
+            return
+
+        documents = [
+            (
+                f"{candidate.dataset_name} "
+                f"{candidate.description} "
+                f"{candidate.task_type} "
+                f"{candidate.domain}"
+            ).strip()
+            for candidate in candidates
+        ]
+
+        custom_stop_words = (
+            ENGLISH_STOP_WORDS.union(
+                {
+                    "data",
+                    "dataset",
+                    "datasets",
+                    "predict",
+                    "prediction",
+                    "predicting",
+                    "using",
+                    "use",
+                    "want",
+                    "model",
+                    "models",
+                    "machine",
+                    "learning",
+                    "project",
+                }
+            )
+        )
+
+        vectorizer = TfidfVectorizer(
+            lowercase=True,
+            stop_words=list(
+                custom_stop_words
+            ),
+            ngram_range=(1, 2),
+            sublinear_tf=True,
+        )
+
+        try:
+            matrix = vectorizer.fit_transform(
+                [
+                    project_description,
+                    *documents,
+                ]
+            )
+
+        except ValueError:
+            for candidate in candidates:
+                candidate.relevance_score = 0.0
+
+            return
+
+        query_vector = matrix[0:1]
+        document_matrix = matrix[1:]
+
+        scores = cosine_similarity(
+            query_vector,
+            document_matrix,
+        ).flatten()
+
+        for candidate, score in zip(
+            candidates,
+            scores,
+        ):
             candidate.relevance_score = round(
-                relevance,
+                float(score),
                 6,
             )
 
-            # Collector가 넣은 원점수 대신
-            # 출처별로 정규화된 검색 점수를 출력한다.
-            candidate.retrieval_score = round(
-                retrieval,
-                6,
+    @staticmethod
+    def _normalize_retrieval_scores(
+        candidates: Iterable[DatasetCandidate],
+    ) -> None:
+        """
+        저장소마다 점수 분포가 다르기 때문에
+        각 저장소 내부의 최대 점수를 기준으로 0~1 정규화한다.
+        """
+
+        grouped_candidates: dict[
+            str,
+            list[DatasetCandidate],
+        ] = defaultdict(list)
+
+        for candidate in candidates:
+            grouped_candidates[
+                candidate.source
+            ].append(candidate)
+
+        for source_candidates in (
+            grouped_candidates.values()
+        ):
+            max_score = max(
+                (
+                    max(
+                        candidate.retrieval_score,
+                        0.0,
+                    )
+                    for candidate
+                    in source_candidates
+                ),
+                default=0.0,
             )
+
+            if max_score <= 0:
+                for candidate in source_candidates:
+                    candidate.retrieval_score = 0.0
+
+                continue
+
+            for candidate in source_candidates:
+                normalized_score = (
+                    max(
+                        candidate.retrieval_score,
+                        0.0,
+                    )
+                    / max_score
+                )
+
+                candidate.retrieval_score = round(
+                    min(
+                        normalized_score,
+                        1.0,
+                    ),
+                    6,
+                )
+
+    @staticmethod
+    def _calculate_match_scores(
+        candidates: Iterable[DatasetCandidate],
+        query_task: str,
+        query_domain: str,
+    ) -> None:
+        """
+        사용자 의도와 데이터셋의 Task 및 Domain 일치도를 계산한다.
+        """
+
+        normalized_query_task = (
+            LiveRecommender._normalize_category(
+                query_task
+            )
+        )
+
+        normalized_query_domain = (
+            LiveRecommender._normalize_category(
+                query_domain
+            )
+        )
+
+        for candidate in candidates:
+            candidate_task = (
+                LiveRecommender._normalize_category(
+                    candidate.task_type
+                )
+            )
+
+            candidate_domain = (
+                LiveRecommender._normalize_category(
+                    candidate.domain
+                )
+            )
+
+            candidate.task_match_score = (
+                LiveRecommender._category_match_score(
+                    query_category=(
+                        normalized_query_task
+                    ),
+                    candidate_category=(
+                        candidate_task
+                    ),
+                    neutral_categories={
+                        "unknown",
+                    },
+                )
+            )
+
+            candidate.domain_match_score = (
+                LiveRecommender._category_match_score(
+                    query_category=(
+                        normalized_query_domain
+                    ),
+                    candidate_category=(
+                        candidate_domain
+                    ),
+                    neutral_categories={
+                        "unknown",
+                        "general",
+                    },
+                )
+            )
+
+    @staticmethod
+    def _category_match_score(
+        query_category: str,
+        candidate_category: str,
+        neutral_categories: set[str],
+    ) -> float:
+        """
+        Category 일치도를 0~1로 반환한다.
+
+        사용자 의도를 추론하지 못한 경우에는
+        후보를 과도하게 감점하지 않도록 중립 점수 0.5를 준다.
+        """
+
+        if query_category in neutral_categories:
+            return 0.5
+
+        if candidate_category in neutral_categories:
+            return 0.0
+
+        if query_category == candidate_category:
+            return 1.0
+
+        return 0.0
+
+    @staticmethod
+    def _calculate_final_scores(
+        candidates: Iterable[DatasetCandidate],
+    ) -> None:
+        """
+        각 평가 요소를 결합해 최종 추천 점수를 계산한다.
+
+        가중치:
+        - 텍스트 관련도: 65%
+        - Task 일치도: 15%
+        - Domain 일치도: 10%
+        - 저장소 검색 점수: 10%
+
+        명확한 Task 불일치에는 패널티를 적용한다.
+        """
+
+        for candidate in candidates:
+            final_score = (
+                candidate.relevance_score * 0.65
+                + candidate.task_match_score * 0.15
+                + candidate.domain_match_score * 0.10
+                + candidate.retrieval_score * 0.10
+            )
+
+            # 사용자 Task와 데이터셋 Task가 명확히 다르면 감점
+            if candidate.task_match_score == 0.0:
+                final_score *= 0.35
+
+            # Domain까지 불일치하면 추가 감점
+            if candidate.domain_match_score == 0.0:
+                final_score *= 0.70
 
             candidate.final_score = round(
                 final_score,
                 6,
             )
 
-            ranked_candidates.append(
-                (
-                    final_score,
-                    relevance,
-                    retrieval,
-                    candidate,
-                )
-            )
-
-        ranked_candidates.sort(
-            key=lambda item: (
-                item[0],
-                item[1],
-                item[2],
-            ),
-            reverse=True,
-        )
-
-        if not ranked_candidates:
-            return []
-
-        # 유사 이름 제거 후에도 limit개를 확보할 수 있도록
-        # 최종 개수보다 넓게 후보를 가져온다.
-        preselection_limit = min(
-            len(ranked_candidates),
-            max(
-                limit * 4,
-                limit,
-            ),
-        )
-
-        preselected = [
-            candidate
-            for (
-                _,
-                _,
-                _,
-                candidate,
-            ) in ranked_candidates[
-                :preselection_limit
-            ]
-        ]
-
-        # 5. 다른 저장소에 존재하는 동일·복제 데이터 억제
-        unique_candidates = (
-            self._remove_similar_name_duplicates(
-                preselected
-            )
-        )
-
-        results: list[DatasetCandidate] = []
-
-        # 6. 최종 후보에만 상세 분석 적용
-        for candidate in unique_candidates[:limit]:
-            self._apply_analysis(candidate)
-            results.append(candidate)
-
-        return results
-
     @staticmethod
-    def _calculate_relevance(
-        query: str,
-        candidates: list[DatasetCandidate],
-    ) -> list[float]:
-        """
-        사용자 검색문과 데이터셋 메타데이터의
-        TF-IDF 코사인 유사도를 계산한다.
-
-        데이터셋 제목을 두 번 포함하여
-        긴 설명보다 제목의 영향이 더 크도록 한다.
-        """
-
-        if not candidates:
-            return []
-
-        documents = [query]
-
-        for candidate in candidates:
-            dataset_text = " ".join(
-                [
-                    candidate.dataset_name,
-                    candidate.dataset_name,
-                    candidate.description,
-                    candidate.task_type,
-                    candidate.domain,
-                ]
-            )
-
-            documents.append(dataset_text)
-
-        try:
-            vectorizer = TfidfVectorizer(
-                lowercase=True,
-                stop_words="english",
-                ngram_range=(1, 2),
-                sublinear_tf=True,
-            )
-
-            matrix = vectorizer.fit_transform(
-                documents
-            )
-
-        except ValueError:
-            return [
-                0.0
-                for _ in candidates
-            ]
-
-        scores = cosine_similarity(
-            matrix[0:1],
-            matrix[1:],
-        ).flatten()
-
-        return [
-            float(score)
-            for score in scores
-        ]
-
-    def _normalize_retrieval_scores_by_source(
-        self,
-        candidates: list[DatasetCandidate],
-    ) -> list[float]:
-        """
-        저장소마다 검색 점수의 범위가 다를 수 있으므로
-        source별 최대값을 기준으로 0~1 범위로 정규화한다.
-
-        기존 KaggleCollector가 검색 점수를 popularity에 저장한 경우를
-        당장 깨뜨리지 않도록 호환 처리한다.
-        """
-
-        raw_scores: list[float] = []
-        scores_by_source: dict[
-            str,
-            list[float],
-        ] = defaultdict(list)
-
-        for candidate in candidates:
-            raw_score = self._get_raw_retrieval_score(
-                candidate
-            )
-
-            raw_scores.append(raw_score)
-
-            source_key = self._normalize_source(
-                candidate.source
-            )
-
-            scores_by_source[source_key].append(
-                raw_score
-            )
-
-        maximum_by_source: dict[str, float] = {}
-
-        for source, scores in scores_by_source.items():
-            maximum_by_source[source] = max(
-                scores,
-                default=0.0,
-            )
-
-        normalized_scores: list[float] = []
-
-        for candidate, raw_score in zip(
-            candidates,
-            raw_scores,
-            strict=True,
-        ):
-            source_key = self._normalize_source(
-                candidate.source
-            )
-
-            source_maximum = maximum_by_source.get(
-                source_key,
-                0.0,
-            )
-
-            if source_maximum <= 0:
-                normalized_scores.append(0.0)
-                continue
-
-            normalized_scores.append(
-                self._clamp_score(
-                    raw_score / source_maximum
-                )
-            )
-
-        return normalized_scores
-
-    @staticmethod
-    def _get_raw_retrieval_score(
-        candidate: DatasetCandidate,
-    ) -> float:
-        """
-        Collector 내부 검색 점수를 반환한다.
-
-        최신 Collector:
-            retrieval_score 사용
-
-        기존 KaggleCollector 호환:
-            retrieval_score가 0이고 popularity가 존재하면
-            popularity를 임시 검색 점수로 사용
-        """
-
-        retrieval = LiveRecommender._safe_float(
-            candidate.retrieval_score
-        )
-
-        if retrieval > 0:
-            return retrieval
-
-        popularity = LiveRecommender._safe_float(
-            candidate.popularity
-        )
-
-        if popularity > 0:
-            return popularity
-
-        return 0.0
-
-    def _remove_exact_duplicates(
-        self,
-        candidates: list[DatasetCandidate],
-    ) -> list[DatasetCandidate]:
-        """
-        동일한 source와 source_id를 가진 후보를 제거한다.
-
-        같은 후보가 여러 번 들어온 경우
-        저장소 내부 검색 점수가 더 높은 항목을 유지한다.
-        """
-
-        unique_by_id: dict[
-            tuple[str, str],
-            DatasetCandidate,
-        ] = {}
-
-        candidates_without_id: list[
-            DatasetCandidate
-        ] = []
-
-        for candidate in candidates:
-            source = self._normalize_source(
-                candidate.source
-            )
-
-            source_id = str(
-                candidate.source_id
-            ).strip()
-
-            if not source_id:
-                candidates_without_id.append(
-                    candidate
-                )
-                continue
-
-            key = (
-                source,
-                source_id,
-            )
-
-            saved = unique_by_id.get(key)
-
-            if saved is None:
-                unique_by_id[key] = candidate
-                continue
-
-            candidate_score = (
-                self._get_raw_retrieval_score(
-                    candidate
-                )
-            )
-
-            saved_score = (
-                self._get_raw_retrieval_score(
-                    saved
-                )
-            )
-
-            if candidate_score > saved_score:
-                unique_by_id[key] = candidate
-
-        return [
-            *unique_by_id.values(),
-            *candidates_without_id,
-        ]
-
-    def _remove_similar_name_duplicates(
-        self,
-        candidates: list[DatasetCandidate],
-    ) -> list[DatasetCandidate]:
-        """
-        최종 점수가 높은 후보부터 확인하여,
-        이름이 거의 같은 데이터셋은 하나만 유지한다.
-
-        candidates는 이미 final_score 내림차순으로 전달되므로
-        먼저 저장된 후보가 더 높은 점수를 가진다.
-        """
-
-        unique: list[DatasetCandidate] = []
-
-        for candidate in candidates:
-            candidate_name = self._normalize_name(
-                candidate.dataset_name
-            )
-
-            if not candidate_name:
-                unique.append(candidate)
-                continue
-
-            duplicated = False
-
-            for saved in unique:
-                saved_name = self._normalize_name(
-                    saved.dataset_name
-                )
-
-                if not saved_name:
-                    continue
-
-                if candidate_name == saved_name:
-                    duplicated = True
-                    break
-
-                similarity = SequenceMatcher(
-                    None,
-                    candidate_name,
-                    saved_name,
-                ).ratio()
-
-                if (
-                    similarity
-                    >= self.duplicate_name_threshold
-                ):
-                    duplicated = True
-                    break
-
-            if not duplicated:
-                unique.append(candidate)
-
-        return unique
-
-    @staticmethod
-    def _apply_analysis(
-        candidate: DatasetCandidate,
+    def _build_recommendation_reasons(
+        candidates: Iterable[DatasetCandidate],
+        query_task: str,
+        query_domain: str,
     ) -> None:
         """
-        데이터셋 이름과 설명을 기반으로 분석 결과를 적용한다.
+        점수와 분석 결과를 바탕으로
+        사용자가 이해할 수 있는 추천 이유를 생성한다.
         """
 
-        analysis = analyze_dataset(
-            dataset_name=candidate.dataset_name,
-            description=candidate.description,
+        normalized_query_task = (
+            LiveRecommender._normalize_category(
+                query_task
+            )
         )
 
-        candidate.task_type = analysis.task_type
-        candidate.domain = analysis.domain
-        candidate.task_confidence = (
-            analysis.confidence
+        normalized_query_domain = (
+            LiveRecommender._normalize_category(
+                query_domain
+            )
         )
 
-        candidate.recommended_metrics = (
-            analysis.metrics
-        )
+        for candidate in candidates:
+            reasons: list[str] = []
 
-        candidate.analysis_signals = (
-            analysis.signals
-        )
+            candidate_task = (
+                LiveRecommender._normalize_category(
+                    candidate.task_type
+                )
+            )
 
-        candidate.target_variable = (
-            analysis.target_variable
-        )
+            candidate_domain = (
+                LiveRecommender._normalize_category(
+                    candidate.domain
+                )
+            )
 
-        candidate.recommended_algorithms = (
-            analysis.recommended_algorithms
-        )
+            if (
+                normalized_query_task
+                not in {"", "unknown"}
+                and candidate_task
+                == normalized_query_task
+            ):
+                reasons.append(
+                    f"Matches the requested "
+                    f"{candidate.task_type} task."
+                )
 
-        candidate.difficulty = (
-            analysis.difficulty
-        )
+            if (
+                normalized_query_domain
+                not in {
+                    "",
+                    "unknown",
+                    "general",
+                }
+                and candidate_domain
+                == normalized_query_domain
+            ):
+                reasons.append(
+                    f"Matches the requested "
+                    f"{candidate.domain} domain."
+                )
 
-        candidate.data_format = (
-            analysis.data_format
-        )
+            if candidate.relevance_score >= 0.15:
+                reasons.append(
+                    "Dataset metadata is highly relevant "
+                    "to the project description."
+                )
+            elif candidate.relevance_score >= 0.05:
+                reasons.append(
+                    "Dataset metadata contains terms "
+                    "related to the project description."
+                )
 
-        candidate.warnings = analysis.warnings
+            if candidate.retrieval_score >= 0.75:
+                reasons.append(
+                    f"Ranked highly in the "
+                    f"{candidate.source} search results."
+                )
+            elif candidate.retrieval_score >= 0.40:
+                reasons.append(
+                    f"Found as a relevant candidate "
+                    f"in {candidate.source}."
+                )
+
+            if candidate.popularity >= 0.60:
+                reasons.append(
+                    "Has relatively strong popularity "
+                    "or usage indicators."
+                )
+            elif candidate.popularity >= 0.40:
+                reasons.append(
+                    "Has moderate popularity "
+                    "or usage indicators."
+                )
+
+            for signal in candidate.analysis_signals:
+                reasons.append(signal)
+
+            if candidate.data_format != "Unknown":
+                reasons.append(
+                    f"Expected data format: "
+                    f"{candidate.data_format}."
+                )
+
+            if (
+                candidate.relevance_score < 0.02
+                and candidate.retrieval_score < 0.02
+            ):
+                reasons.append(
+                    "Text relevance is weak, so the dataset "
+                    "should be reviewed manually."
+                )
+
+            if not reasons:
+                reasons.append(
+                    "Included based on the combined "
+                    "recommendation score."
+                )
+
+            candidate.recommendation_reasons = (
+                reasons[:6]
+            )
 
     @staticmethod
-    def _normalize_name(
-        name: str,
+    def _remove_similar_names(
+        candidates: Iterable[DatasetCandidate],
+        similarity_threshold: float = 0.86,
+    ) -> list[DatasetCandidate]:
+        """
+        이름이 매우 유사한 데이터셋을 중복 후보로 간주한다.
+
+        candidates는 이미 최종 점수 순으로 정렬되어 있으므로
+        먼저 등장한 높은 점수의 후보를 유지한다.
+        """
+
+        selected: list[DatasetCandidate] = []
+        selected_names: list[str] = []
+
+        for candidate in candidates:
+            normalized_name = (
+                LiveRecommender._normalize_dataset_name(
+                    candidate.dataset_name
+                )
+            )
+
+            if not normalized_name:
+                selected.append(candidate)
+                continue
+
+            is_duplicate = any(
+                SequenceMatcher(
+                    None,
+                    normalized_name,
+                    existing_name,
+                ).ratio()
+                >= similarity_threshold
+                for existing_name
+                in selected_names
+            )
+
+            if is_duplicate:
+                continue
+
+            selected.append(candidate)
+            selected_names.append(
+                normalized_name
+            )
+
+        return selected
+
+    @staticmethod
+    def _normalize_dataset_name(
+        dataset_name: str,
     ) -> str:
         """
-        데이터셋 이름 비교를 위해 소문자와 공백 형태로 정규화한다.
+        데이터셋 이름의 중복 비교를 위한 정규화.
+
+        의미가 약한 일반 단어와 특수문자를 제거한다.
         """
 
-        normalized = str(name).lower().strip()
+        text = str(
+            dataset_name
+        ).lower()
 
-        normalized = re.sub(
-            r"[^a-z0-9]+",
+        text = re.sub(
+            r"[^a-z0-9\s]",
             " ",
-            normalized,
+            text,
         )
 
-        normalized = re.sub(
+        generic_words = {
+            "data",
+            "dataset",
+            "datasets",
+            "clean",
+            "cleaned",
+            "updated",
+            "final",
+            "version",
+            "ml",
+            "machine",
+            "learning",
+        }
+
+        words = [
+            word
+            for word in text.split()
+            if word not in generic_words
+        ]
+
+        return " ".join(words)
+
+    @staticmethod
+    def _normalize_category(
+        value: str,
+    ) -> str:
+        """
+        Task 또는 Domain 값을 비교 가능한 문자열로 정규화한다.
+        """
+
+        return re.sub(
             r"\s+",
             " ",
-            normalized,
-        )
-
-        return normalized.strip()
-
-    @staticmethod
-    def _normalize_source(
-        source: str,
-    ) -> str:
-        return str(source).strip().lower()
-
-    @staticmethod
-    def _safe_float(
-        value: object,
-    ) -> float:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return 0.0
-
-    @staticmethod
-    def _clamp_score(
-        score: object,
-    ) -> float:
-        """
-        값을 안전하게 0~1 범위로 제한한다.
-        """
-
-        numeric_score = LiveRecommender._safe_float(
-            score
-        )
-
-        return min(
-            max(numeric_score, 0.0),
-            1.0,
+            str(value).strip().lower(),
         )
