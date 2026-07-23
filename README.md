@@ -181,13 +181,15 @@ AI-Dataset-Recommendation
 
 **Comparison Items**
 
-- Recommendation Score
-- Relevance Score
-- Task Match
-- Domain Match
-- Recommendation Reason
-- Recommended Algorithm
-- Evaluation Metric
+| Feature                   | Description        |
+| ------------------------- | ------------------ |
+| 📊 Dataset Recommendation | 프로젝트 설명 기반 데이터셋 추천 |
+| ⭐ Recommendation Score    | 데이터셋 관련성 점수 제공     |
+| 💡 Recommendation Reason  | 추천 이유 제공           |
+| 🤖 Recommended Algorithm  | 적합한 머신러닝 알고리즘 제안   |
+| 📈 Evaluation Metric      | 적절한 평가 지표 추천       |
+| 🔍 Dataset Comparison     | 여러 데이터셋 비교 기능      |
+
 
 ---
 
