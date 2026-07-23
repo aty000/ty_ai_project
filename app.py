@@ -755,6 +755,9 @@ if recommend_button:
 
     query = project_description.strip()
 
+    st.write("✅ Button click detected")
+    print("BUTTON CLICKED", flush=True)
+
     if not query:
 
         st.warning(
@@ -814,11 +817,13 @@ if recommend_button:
                     "recommendations"
                 ] = []
 
-                st.error(
-                    "Recommendation failed: "
-                    f"{error}"
-                )
+                st.exception(error)
 
+                print(
+                    "RECOMMENDATION ERROR: "
+                    f"{type(error).__name__}: {error}",
+                    flush=True,
+                )
 # -------------------------------------------------
 # Recommendation Results
 # -------------------------------------------------
